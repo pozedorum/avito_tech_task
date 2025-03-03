@@ -1,4 +1,4 @@
-module github.com/pozedorum/avito_tech_task
+module github.com/pozedorum/user-balance-service
 
 go 1.22.3
 
