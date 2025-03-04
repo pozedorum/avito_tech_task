@@ -1,0 +1,239 @@
+package pgdb
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	sq "github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/pozedorum/user-balance-service/internal/entity"
+	"github.com/pozedorum/user-balance-service/internal/repo/repoerrors"
+	"github.com/pozedorum/user-balance-service/pkg/postgres"
+	log "github.com/sirupsen/logrus"
+)
+
+type AccountRepo struct {
+	*postgres.Postgres
+}
+
+func NewAccountRepo() *AccountRepo {
+	return &AccountRepo{}
+}
+
+func (r *AccountRepo) CreateAccount(ctx context.Context) (int, error) {
+	sql, args, _ := r.Builder.
+		Insert("accounts").
+		Values(sq.Expr("DEFAULT")).
+		Suffix("RETURNING id").
+		ToSql()
+
+	var id int
+	err := r.Pool.QueryRow(ctx, sql, args...).Scan(&id)
+	if err != nil {
+		log.Debugf("err: %v", err)
+		var pgErr *pgconn.PgError
+		if ok := errors.As(err, &pgErr); ok {
+			if pgErr.Code == "23505" {
+				return 0, repoerrors.ErrAlreadyExists
+			}
+		}
+		return 0, fmt.Errorf("AccountRepo.CreateAccount - r.Pool.QueryRow: %v", err)
+	}
+	return id, nil
+}
+
+func (r *AccountRepo) GetAccountById(ctx context.Context, id int) (entity.Account, error) {
+	sql, args, _ := r.Builder.
+		Select("*").
+		From("accounts").
+		Where("id = ?", id).
+		ToSql()
+	var account entity.Account
+	err := r.Pool.QueryRow(ctx, sql, args...).
+		Scan(
+			&account.Id,
+			&account.Balance,
+			&account.CreatedAt,
+		)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.Account{}, repoerrors.ErrNotFound
+		}
+		return entity.Account{}, fmt.Errorf("AccountRepo.GetAccountById - r.Pool.QueryRow: %v", err)
+	}
+
+	return account, nil
+}
+
+func (r *AccountRepo) Deposit(ctx context.Context, id, amount int) error {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Deposit - r.Pool.Begit: %v", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	sql, args, _ := r.Builder.
+		Update("accounts").
+		Set("balance", sq.Expr("balance + ?", amount)).
+		Where("id = ?", id).
+		ToSql()
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Deposit - tx.Exec: %v", err)
+	}
+
+	sql, args, _ = r.Builder.Insert("operations").
+		Columns("account_id", "amount", "operation_type").
+		Values(id, amount, entity.OperationTypeDeposit).
+		ToSql()
+
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Deposit - tx.Exec: %v", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Deposit - tx.Comit: %v", err)
+	}
+
+	return nil
+}
+
+func (r *AccountRepo) Withdraw(ctx context.Context, id int, amount int) error {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - r.Pool.Begit: %v", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	sql, args, _ := r.Builder.
+		Select("balance").
+		From("accounts").
+		Where("id = ?", id).
+		ToSql()
+
+	var balance int
+	err = tx.QueryRow(ctx, sql, args...).Scan(&balance)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+	}
+
+	if balance < amount {
+		return repoerrors.ErrNotEnoughBalance
+	}
+
+	sql, args, _ = r.Builder.
+		Update("accounts").
+		Set("balance", sq.Expr("balance - ?", amount)).
+		Where("id = ?", id).
+		ToSql()
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+	}
+
+	sql, args, _ = r.Builder.Insert("operations").
+		Columns("account_id", "amount", "operation_type").
+		Values(id, amount, entity.OperationTypeWithdraw).
+		ToSql()
+
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Comit: %v", err)
+	}
+
+	return nil
+}
+
+func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.WitTransferhdraw - r.Pool.Begit: %v", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	// check balance from
+	sql, args, _ := r.Builder.
+		Select("balance").
+		From("accounts").
+		Where("id = ?", from).
+		ToSql()
+
+	var balance int
+	err = tx.QueryRow(ctx, sql, args...).Scan(&balance)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+	}
+
+	if balance < amount {
+		return repoerrors.ErrNotEnoughBalance
+	}
+
+	// get money from
+	sql, args, _ = r.Builder.
+		Update("accounts").
+		Set("balance", sq.Expr("balance - ?", amount)).
+		Where("id = ?", from).
+		ToSql()
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+	}
+
+	// set money to
+	sql, args, _ = r.Builder.
+		Update("accounts").
+		Set("balance", sq.Expr("balance + ?", amount)).
+		Where("id = ?", from).
+		ToSql()
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+	}
+
+	// write operation history
+	sql, args, _ = r.Builder.Insert("operations").
+		Columns("account_id", "amount", "operation_type").
+		Values(from, amount, entity.OperationTypeTransferFrom).
+		ToSql()
+
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+	}
+
+	sql, args, _ = r.Builder.Insert("operations").
+		Columns("account_id", "amount", "operation_type").
+		Values(to, amount, entity.OperationTypeTransferTo).
+		ToSql()
+
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+	}
+
+	// commit transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Comit: %v", err)
+	}
+
+	return nil
+}
