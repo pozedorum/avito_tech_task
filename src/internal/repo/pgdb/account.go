@@ -18,8 +18,8 @@ type AccountRepo struct {
 	*postgres.Postgres
 }
 
-func NewAccountRepo() *AccountRepo {
-	return &AccountRepo{}
+func NewAccountRepo(pg *postgres.Postgres) *AccountRepo {
+	return &AccountRepo{pg}
 }
 
 func (r *AccountRepo) CreateAccount(ctx context.Context) (int, error) {
@@ -70,7 +70,7 @@ func (r *AccountRepo) GetAccountById(ctx context.Context, id int) (entity.Accoun
 func (r *AccountRepo) Deposit(ctx context.Context, id, amount int) error {
 	tx, err := r.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Deposit - r.Pool.Begit: %v", err)
+		return fmt.Errorf("AccountRepo.Deposit - r.Pool.Begin: %v", err)
 	}
 
 	defer func() {
