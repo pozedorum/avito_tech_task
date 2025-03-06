@@ -54,5 +54,70 @@ func (r *OperationRepo) GerAllRevenueOperationsGroupedByProduct(ctx context.Cont
 	return productNames, amounts, nil
 }
 
-func (r *OperationRepo) OpertionsPagination(ctx context.Context, account int, sortType string, offset int, limit int) ([]entity.Operation, []string, error) {
+func (r *OperationRepo) OpertionsPagination(ctx context.Context, accountId int, sortType string, offset int, limit int) ([]entity.Operation, []string, error) {
+	if limit > maxPaginationLimit {
+		limit = maxPaginationLimit
+	}
+	if limit == 0 {
+		limit = defaultPaginationLimit
+	}
+
+	var orderBySql string
+	switch sortType {
+	case "":
+		orderBySql = "created_at DESC"
+	case DataSortType:
+		orderBySql = "created_at DESC"
+	case AmountSortType:
+		orderBySql = "amount DESC"
+	default:
+		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - wrong sort type - %s", sortType)
+	}
+
+	sql, args, _ := r.Builder.Select("operations.id",
+		"account_id",
+		"amount",
+		"operation_type",
+		"created_at",
+		"COALESCE((case when operations.product_id is null then null else products.name end), '') as product_name",
+		"product_id",
+		"order_id",
+		"COALESCE(description, '')").
+		From("operations").
+		InnerJoin("products on products.product_id = operations.product_id or operations.product_id is null").
+		Where("account_id = ?", accountId).
+		OrderBy(orderBySql).
+		Limit(uint64(limit)).
+		Offset(uint64(offset)).
+		ToSql()
+	rows, err := r.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - r.Pool.Query - %w", err)
+	}
+	defer rows.Close()
+
+	var (
+		operations   []entity.Operation
+		productNames []string
+
+		operation   entity.Operation
+		productName string
+	)
+	for rows.Next() {
+		err = rows.Scan(&operation.Id,
+			&operation.AccountId,
+			&operation.Amount,
+			&operation.OperationType,
+			&operation.CreatedAt,
+			&productName,
+			&operation.ProductId,
+			&operation.OrderId,
+			&operation.Description)
+		if err != nil {
+			return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - rows.Scan - %w", err)
+		}
+		operations = append(operations, operation)
+		productNames = append(productNames, productName)
+	}
+	return operations, productNames, nil
 }

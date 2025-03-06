@@ -26,7 +26,7 @@ func (r *ProductRepo) CreateProduct(ctx context.Context, name string) (int, erro
 	var id int
 	err := r.Pool.QueryRow(ctx, sql, args...).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("ProductRepo.Deposit - r.Pool.QueryRow: %v", err)
+		return 0, fmt.Errorf("ProductRepo.CreateProduct - r.Pool.QueryRow: %v", err)
 	}
 
 	return id, nil
