@@ -84,7 +84,7 @@ func (r *AccountRepo) Deposit(ctx context.Context, id, amount int) error {
 		ToSql()
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Deposit - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Deposit - tx.Exec(update accounts): %v", err)
 	}
 
 	sql, args, _ = r.Builder.Insert("operations").
@@ -94,7 +94,7 @@ func (r *AccountRepo) Deposit(ctx context.Context, id, amount int) error {
 
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Deposit - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Deposit - tx.Exec(insert operations): %v", err)
 	}
 
 	err = tx.Commit(ctx)
@@ -124,7 +124,7 @@ func (r *AccountRepo) Withdraw(ctx context.Context, id int, amount int) error {
 	var balance int
 	err = tx.QueryRow(ctx, sql, args...).Scan(&balance)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec(select balance): %v", err)
 	}
 
 	if balance < amount {
@@ -138,7 +138,7 @@ func (r *AccountRepo) Withdraw(ctx context.Context, id int, amount int) error {
 		ToSql()
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec(update accounts): %v", err)
 	}
 
 	sql, args, _ = r.Builder.Insert("operations").
@@ -148,7 +148,7 @@ func (r *AccountRepo) Withdraw(ctx context.Context, id int, amount int) error {
 
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Withdraw - tx.Exec(insert operations): %v", err)
 	}
 
 	err = tx.Commit(ctx)
@@ -179,7 +179,7 @@ func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error 
 	var balance int
 	err = tx.QueryRow(ctx, sql, args...).Scan(&balance)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec(select balance): %v", err)
 	}
 
 	if balance < amount {
@@ -194,7 +194,7 @@ func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error 
 		ToSql()
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec(update accounts): %v", err)
 	}
 
 	// set money to
@@ -205,7 +205,7 @@ func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error 
 		ToSql()
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec(update accounts 2): %v", err)
 	}
 
 	// write operation history
@@ -216,7 +216,7 @@ func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error 
 
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec(insert operations): %v", err)
 	}
 
 	sql, args, _ = r.Builder.Insert("operations").
@@ -226,7 +226,7 @@ func (r *AccountRepo) Transfer(ctx context.Context, from, to, amount int) error 
 
 	_, err = tx.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("AccountRepo.Transfer - tx.Exec: %v", err)
+		return fmt.Errorf("AccountRepo.Transfer - tx.Exec(insert operations 2): %v", err)
 	}
 
 	// commit transaction

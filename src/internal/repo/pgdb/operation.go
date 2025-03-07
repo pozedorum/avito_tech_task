@@ -45,7 +45,7 @@ func (r *OperationRepo) GerAllRevenueOperationsGroupedByProduct(ctx context.Cont
 		var Amount int
 		err = rows.Scan(&productName, &Amount)
 		if err != nil {
-			return nil, nil, fmt.Errorf("OperationRepo.GerAllRevenueOperationsGroupedByProduct - %w", err)
+			return nil, nil, fmt.Errorf("OperationRepo.GerAllRevenueOperationsGroupedByProduct: %w", err)
 		}
 		productNames = append(productNames, productName)
 		amounts = append(amounts, Amount)
@@ -71,7 +71,7 @@ func (r *OperationRepo) OpertionsPagination(ctx context.Context, accountId int, 
 	case AmountSortType:
 		orderBySql = "amount DESC"
 	default:
-		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - wrong sort type - %s", sortType)
+		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - wrong sort type: %s", sortType)
 	}
 
 	sql, args, _ := r.Builder.Select("operations.id",
@@ -92,7 +92,7 @@ func (r *OperationRepo) OpertionsPagination(ctx context.Context, accountId int, 
 		ToSql()
 	rows, err := r.Pool.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - r.Pool.Query - %w", err)
+		return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - r.Pool.Query: %w", err)
 	}
 	defer rows.Close()
 
@@ -114,7 +114,7 @@ func (r *OperationRepo) OpertionsPagination(ctx context.Context, accountId int, 
 			&operation.OrderId,
 			&operation.Description)
 		if err != nil {
-			return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - rows.Scan - %w", err)
+			return nil, nil, fmt.Errorf("OperationRepo.OperationsPagination - rows.Scan: %w", err)
 		}
 		operations = append(operations, operation)
 		productNames = append(productNames, productName)

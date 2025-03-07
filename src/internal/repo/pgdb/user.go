@@ -43,28 +43,6 @@ func (r *UserRepo) CreateUser(ctx context.Context, user entity.User) (int, error
 	return id, nil
 }
 
-func (r *UserRepo) GetUserByUsernameAndPassword(ctx context.Context, username, password string) (entity.User, error) {
-	sql, args, _ := r.Builder.
-		Select("*").
-		From("users").
-		Where("username = ? and password = ?", username, password).
-		ToSql()
-	var user entity.User
-	err := r.Pool.QueryRow(ctx, sql, args...).Scan(
-		&user.Id,
-		&user.Username,
-		&user.Password,
-		&user.CreatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return entity.User{}, repoerrors.ErrNotFound
-		}
-		return entity.User{}, fmt.Errorf("UserRepo.GetUserByUsernameAndPassword - r.Pool.QueryRow - %w", err)
-	}
-	return user, nil
-}
-
 func (r *UserRepo) GetUserById(ctx context.Context, id int) (entity.User, error) {
 	sql, args, _ := r.Builder.
 		Select("*").
@@ -106,6 +84,28 @@ func (r *UserRepo) GetUserByUsername(ctx context.Context, username string) (enti
 			return entity.User{}, repoerrors.ErrNotFound
 		}
 		return entity.User{}, fmt.Errorf("UserRepo.GetUserByUsername - r.Pool.QueryRow - %w", err)
+	}
+	return user, nil
+}
+
+func (r *UserRepo) GetUserByUsernameAndPassword(ctx context.Context, username, password string) (entity.User, error) {
+	sql, args, _ := r.Builder.
+		Select("*").
+		From("users").
+		Where("username = ? and password = ?", username, password).
+		ToSql()
+	var user entity.User
+	err := r.Pool.QueryRow(ctx, sql, args...).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Password,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, repoerrors.ErrNotFound
+		}
+		return entity.User{}, fmt.Errorf("UserRepo.GetUserByUsernameAndPassword - r.Pool.QueryRow - %w", err)
 	}
 	return user, nil
 }
