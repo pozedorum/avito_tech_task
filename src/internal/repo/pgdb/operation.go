@@ -54,7 +54,7 @@ func (r *OperationRepo) GerAllRevenueOperationsGroupedByProduct(ctx context.Cont
 	return productNames, amounts, nil
 }
 
-func (r *OperationRepo) OpertionsPagination(ctx context.Context, accountId int, sortType string, offset int, limit int) ([]entity.Operation, []string, error) {
+func (r *OperationRepo) OperationsPagination(ctx context.Context, accountId int, sortType string, offset int, limit int) ([]entity.Operation, []string, error) {
 	if limit > maxPaginationLimit {
 		limit = maxPaginationLimit
 	}
