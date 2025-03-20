@@ -31,14 +31,14 @@ func (s *AccountService) GetAccountById(ctx context.Context, userId int) (entity
 	return s.accountRepo.GetAccountById(ctx, userId)
 }
 
-func (s *AccountService) Deposit(ctx context.Context, id int, amount int) error {
-	return s.accountRepo.Deposit(ctx, id, amount)
+func (s *AccountService) Deposit(ctx context.Context, input AccountDepositInput) error {
+	return s.accountRepo.Deposit(ctx, input.Id, input.Amount)
 }
 
-func (s *AccountService) Withdraw(ctx context.Context, id int, amount int) error {
-	return s.accountRepo.Withdraw(ctx, id, amount)
+func (s *AccountService) Withdraw(ctx context.Context, input AccountWithDrawInput) error {
+	return s.accountRepo.Withdraw(ctx, input.Id, input.Amount)
 }
 
-func (s *AccountService) Transfer(ctx context.Context, from int, to int, amount int) error {
-	return s.accountRepo.Transfer(ctx, from, to, amount)
+func (s *AccountService) Transfer(ctx context.Context, input AcocuntTransferInput) error {
+	return s.accountRepo.Transfer(ctx, input.FromId, input.ToId, input.Amount)
 }
