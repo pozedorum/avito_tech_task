@@ -1,0 +1,22 @@
+package v1
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/labstack/echo/v4"
+)
+
+var (
+	ErrInvalidAuthHeader = fmt.Errorf("invalid auth header")
+	ErrCannotParceToken = fmt.Errorf("cannot parce token")
+)
+
+func newErrResponce(c echo.Context, errStatus int, message string) {
+	err := errors.New(message)
+	if _, ok := err.(*echo.HTTPError); !ok {
+		report := echo.NewHTTPError(errStatus, err.Error())
+		c.JSON(errStatus, report)
+	}
+	c.Error(errors.New("internal server error"))
+}

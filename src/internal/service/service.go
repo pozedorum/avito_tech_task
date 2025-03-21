@@ -21,7 +21,7 @@ type AccountWithDrawInput struct {
 	Amount int
 }
 
-type AcocuntTransferInput struct {
+type AccountTransferInput struct {
 	FromId int
 	ToId int
 	Amount int
@@ -32,7 +32,7 @@ type Account interface {
 	GetAccountById(ctx context.Context, userId int) (entity.Account, error)
 	Deposit(ctx context.Context, input AccountDepositInput) error
 	Withdraw(ctx context.Context, input AccountWithDrawInput) error
-	Transfer(ctx context.Context, input AcocuntTransferInput) error
+	Transfer(ctx context.Context, input AccountTransferInput) error
 }
 
 
