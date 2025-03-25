@@ -19,71 +19,69 @@ type TokenClaims struct {
 	UserId int
 }
 
-
 type AuthService struct {
-	userRepo repo.User
+	userRepo       repo.User
 	passwordHasher hasher.PasswordHasher
-	signKey string
-	tokenTTL time.Duration
+	signKey        string
+	tokenTTL       time.Duration
 }
 
 func NewAuthService(userRepo repo.User, passwordHasher hasher.PasswordHasher, signKey string, tokenTTL time.Duration) *AuthService {
 	return &AuthService{
-		userRepo: userRepo,
+		userRepo:       userRepo,
 		passwordHasher: passwordHasher,
-		signKey: signKey,
-		tokenTTL: tokenTTL,
+		signKey:        signKey,
+		tokenTTL:       tokenTTL,
 	}
 }
 
 func (s *AuthService) CreateUser(ctx context.Context, input AuthCreateUserInput) (int, error) {
 	user := entity.User{
-		Username: input.username,
-		Password: s.passwordHasher.Hash(input.password),
+		Username: input.Username,
+		Password: s.passwordHasher.Hash(input.Password),
 	}
-	userId, err := s.userRepo.CreateUser(ctx,user)
+	userId, err := s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		if errors.Is(err, repoerrors.ErrAlreadyExists) {
 			return 0, ErrUserAlreadyExists
 		}
-		log.Errorf("AuthService.CreateUser - s.userRepo.CreateUser: %w", err)
+		log.Errorf("AuthService.CreateUser - s.userRepo.CreateUser: %v", err)
 		return 0, ErrCannotCreateUser
 	}
 	return userId, nil
 }
 
-
-func (s *AuthService) GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error){
-	user, err := s.userRepo.GetUserByUsernameAndPassword(ctx, input.username, input.password)
+func (s *AuthService) GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error) {
+	user, err := s.userRepo.GetUserByUsernameAndPassword(ctx, input.Username, input.Password)
 	if err != nil {
 		if errors.Is(err, repoerrors.ErrNotFound) {
 			return "", ErrUserNotFound
 		}
-		log.Errorf("AuthService.GenerateToken: cannot get user: %w", err)
+		log.Errorf("AuthService.GenerateToken: cannot get user: %v", err)
 		return "", ErrCannotGetUser
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &TokenClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(s.tokenTTL).Unix(),
-			IssuedAt: time.Now().Unix(),
+			IssuedAt:  time.Now().Unix(),
 		},
 		UserId: user.Id,
 	})
-	
+
 	tokenString, err := token.SignedString([]byte(s.signKey))
 	if err != nil {
-		log.Errorf("AuthService.GenerateToken: cannot sign token: %w", err)
+		log.Errorf("AuthService.GenerateToken: cannot sign token: %v", err)
 		return "", ErrCannotSignToken
 	}
 
 	return tokenString, nil
 }
 
-func (s *AuthService) ParceToken(accessToken string) (int, error) {
-	token, err := jwt.ParseWithClaims(accessToken, &TokenClaims{}, func(token *jwt.Token)(interface{}, error) {
+func (s *AuthService) ParseToken(accessToken string) (int, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("AuthService.ParceToken: unexpected signing method: %v", token.Header["alg"]) // отправка названия метода подписи
+			return nil, fmt.Errorf("AuthService.ParseToken: unexpected signing method: %v", token.Header["alg"]) // отправка названия метода подписи
 		}
 
 		return []byte(s.signKey), nil
@@ -100,4 +98,3 @@ func (s *AuthService) ParceToken(accessToken string) (int, error) {
 
 	return claims.UserId, nil
 }
-

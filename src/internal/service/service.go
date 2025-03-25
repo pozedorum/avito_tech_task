@@ -12,18 +12,18 @@ import (
 
 // account.go
 type AccountDepositInput struct {
-	Id int
+	Id     int
 	Amount int
 }
 
 type AccountWithDrawInput struct {
-	Id int
+	Id     int
 	Amount int
 }
 
 type AccountTransferInput struct {
 	FromId int
-	ToId int
+	ToId   int
 	Amount int
 }
 
@@ -34,7 +34,6 @@ type Account interface {
 	Withdraw(ctx context.Context, input AccountWithDrawInput) error
 	Transfer(ctx context.Context, input AccountTransferInput) error
 }
-
 
 // auth.go
 type AuthCreateUserInput struct {
@@ -50,7 +49,7 @@ type AuthGenerateTokenInput struct {
 type Auth interface {
 	CreateUser(ctx context.Context, input AuthCreateUserInput) (int, error)
 	GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error)
-	ParceToken(accessToken string) (int, error)
+	ParseToken(accessToken string) (int, error)
 }
 
 // operation.go
@@ -83,7 +82,6 @@ type Product interface {
 	GetProductById(ctx context.Context, id int) (entity.Product, error)
 }
 
-
 // reservation.go
 type ReservationCreateInput struct {
 	AccountId int
@@ -99,28 +97,28 @@ type Reservation interface {
 }
 
 type Services struct {
-	Auth 		Auth
-	Account 	Account
-	Operation 	Operation
-	Product 	Product
+	Auth        Auth
+	Account     Account
+	Operation   Operation
+	Product     Product
 	Reservation Reservation
 }
 
 type ServicesDependenies struct {
-	Repos *repo.Repositories
+	Repos  *repo.Repositories
 	GDrive webapi.GDrive
 	Hasher hasher.PasswordHasher
 
-	SignKey string
+	SignKey  string
 	TokenTTL time.Duration
 }
 
 func NewServices(deps ServicesDependenies) *Services {
 	return &Services{
-		Auth: NewAuthService(deps.Repos.User,deps.Hasher,deps.SignKey,deps.TokenTTL),
-		Account: NewAccountService(deps.Repos.Account),
-		Operation: NewOperationService(deps.Repos.Operation,deps.Repos.Product,deps.GDrive),
-		Product: NewProductService(deps.Repos.Product),
+		Auth:        NewAuthService(deps.Repos.User, deps.Hasher, deps.SignKey, deps.TokenTTL),
+		Account:     NewAccountService(deps.Repos.Account),
+		Operation:   NewOperationService(deps.Repos.Operation, deps.Repos.Product, deps.GDrive),
+		Product:     NewProductService(deps.Repos.Product),
 		Reservation: NewReservationService(deps.Repos.Reservation),
 	}
 }

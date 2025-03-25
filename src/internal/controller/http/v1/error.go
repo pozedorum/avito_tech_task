@@ -9,7 +9,7 @@ import (
 
 var (
 	ErrInvalidAuthHeader = fmt.Errorf("invalid auth header")
-	ErrCannotParceToken = fmt.Errorf("cannot parce token")
+	ErrCannotParseToken  = fmt.Errorf("cannot parse token")
 )
 
 func newErrResponce(c echo.Context, errStatus int, message string) {

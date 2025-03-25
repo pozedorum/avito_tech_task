@@ -54,7 +54,7 @@ func New(url string, opts ...Option) (*Postgres, error) {
 	pg.Builder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 	poolConfig, err := pgxpool.ParseConfig(url)
 	if err != nil {
-		return nil, fmt.Errorf("pgdb - New - pgxpool.ParceConfig: %w", err)
+		return nil, fmt.Errorf("pgdb - New - pgxpool.ParseConfig: %w", err)
 	}
 
 	poolConfig.MaxConns = int32(pg.maxPoolsize)

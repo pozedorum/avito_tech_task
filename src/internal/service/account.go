@@ -39,6 +39,6 @@ func (s *AccountService) Withdraw(ctx context.Context, input AccountWithDrawInpu
 	return s.accountRepo.Withdraw(ctx, input.Id, input.Amount)
 }
 
-func (s *AccountService) Transfer(ctx context.Context, input AcocuntTransferInput) error {
+func (s *AccountService) Transfer(ctx context.Context, input AccountTransferInput) error {
 	return s.accountRepo.Transfer(ctx, input.FromId, input.ToId, input.Amount)
 }

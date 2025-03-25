@@ -11,20 +11,20 @@ type accountRoutes struct {
 	accountService service.Account
 }
 
-func NewAccountRoutes (g *echo.Group,accountService service.Account) {
+func NewAccountRoutes(g *echo.Group, accountService service.Account) {
 	r := &accountRoutes{
 		accountService: accountService,
 	}
-	
-	g.POST("/create",r.create)
+
+	g.POST("/create", r.create)
 	g.POST("/deposit", r.deposit)
 	g.POST("/withdraw", r.withdraw)
 	g.POST("/transfer", r.transfer)
 	g.POST("/", r.getBalance)
+
 }
 
-
-func (r *accountRoutes) create (c echo.Context) error {
+func (r *accountRoutes) create(c echo.Context) error {
 	id, err := r.accountService.CreateAccount(c.Request().Context())
 	if err != nil {
 		if err == service.ErrAccountAlreadyExists {
@@ -39,11 +39,16 @@ func (r *accountRoutes) create (c echo.Context) error {
 		Id int `json:"id"`
 	}
 
-	return c.JSON(http.StatusCreated, responce {Id: id})
+	return c.JSON(http.StatusCreated, responce{Id: id})
 }
 
-func (r *accountRoutes) deposit (c echo.Context) error {
-	var input service.AccountDepositInput
+type accountDepositInput struct {
+	Id     int `json:"id" validate:"required"`
+	Amount int `json:"amount" validate:"required"`
+}
+
+func (r *accountRoutes) deposit(c echo.Context) error {
+	var input accountDepositInput
 
 	if err := c.Bind(&input); err != nil {
 		newErrResponce(c, http.StatusBadRequest, "invalid request error")
@@ -56,10 +61,10 @@ func (r *accountRoutes) deposit (c echo.Context) error {
 	}
 
 	err := r.accountService.Deposit(c.Request().Context(), service.AccountDepositInput{
-		Id: input.Id,
+		Id:     input.Id,
 		Amount: input.Amount,
 	})
-	
+
 	if err != nil {
 		if err == service.ErrAccountNotFound {
 			newErrResponce(c, http.StatusBadRequest, err.Error())
@@ -69,11 +74,16 @@ func (r *accountRoutes) deposit (c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"message":"success"})
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "success"})
 }
 
-func (r *accountRoutes) withdraw (c echo.Context) error {
-	var input service.AccountWithDrawInput
+type accountWithDrawInput struct {
+	Id     int `json:"id" validate:"required"`
+	Amount int `json:"amount" validate:"required"`
+}
+
+func (r *accountRoutes) withdraw(c echo.Context) error {
+	var input accountWithDrawInput
 
 	if err := c.Bind(&input); err != nil {
 		newErrResponce(c, http.StatusBadRequest, "invalid request error")
@@ -86,7 +96,7 @@ func (r *accountRoutes) withdraw (c echo.Context) error {
 	}
 
 	err := r.accountService.Withdraw(c.Request().Context(), service.AccountWithDrawInput{
-		Id: input.Id,
+		Id:     input.Id,
 		Amount: input.Amount,
 	})
 
@@ -99,11 +109,17 @@ func (r *accountRoutes) withdraw (c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"message":"success"})
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "success"})
 }
 
-func (r *accountRoutes) transfer (c echo.Context) error {
-	var input service.AccountTransferInput
+type accountTransferInput struct {
+	FromId int `json:"from" validate:"required"`
+	ToId   int `json:"to" validate:"required"`
+	Amount int `json:"amount" validate:"required"`
+}
+
+func (r *accountRoutes) transfer(c echo.Context) error {
+	var input accountTransferInput
 
 	if err := c.Bind(&input); err != nil {
 		newErrResponce(c, http.StatusBadRequest, "invalid request error")
@@ -117,7 +133,7 @@ func (r *accountRoutes) transfer (c echo.Context) error {
 
 	err := r.accountService.Transfer(c.Request().Context(), service.AccountTransferInput{
 		FromId: input.FromId,
-		ToId: input.ToId,
+		ToId:   input.ToId,
 		Amount: input.Amount,
 	})
 
@@ -130,11 +146,15 @@ func (r *accountRoutes) transfer (c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"message":"success"})
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "success"})
 }
 
-func (r *accountRoutes) getBalance (c echo.Context) error {
-	var input service.
+type getBalanceInput struct {
+	Id int `json:"id" validate:"required"`
+}
+
+func (r *accountRoutes) getBalance(c echo.Context) error {
+	var input getBalanceInput
 
 	if err := c.Bind(&input); err != nil {
 		newErrResponce(c, http.StatusBadRequest, "invalid request error")
@@ -146,12 +166,7 @@ func (r *accountRoutes) getBalance (c echo.Context) error {
 		return err
 	}
 
-	err := r.accountService.GetAccountById(c.Request().Context(), service.AccountTransferInput{
-		FromId: input.FromId,
-		ToId: input.ToId,
-		Amount: input.Amount,
-	})
-
+	account, err := r.accountService.GetAccountById(c.Request().Context(), input.Id)
 	if err != nil {
 		if err == service.ErrAccountNotFound {
 			newErrResponce(c, http.StatusBadRequest, err.Error())
@@ -161,7 +176,13 @@ func (r *accountRoutes) getBalance (c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"message":"success"})
-}
+	type responce struct {
+		Id      int `json:"id"`
+		Balance int `json:"balance"`
+	}
 
-// Поменять все input структуры на новые, новые написать с учётом тегов
+	return c.JSON(http.StatusOK, responce{
+		Id:      account.Id,
+		Balance: account.Balance,
+	})
+}
