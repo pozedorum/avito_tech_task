@@ -37,13 +37,13 @@ type Account interface {
 
 // auth.go
 type AuthCreateUserInput struct {
-	username string
-	password string
+	Username string
+	Password string
 }
 
 type AuthGenerateTokenInput struct {
-	username string
-	password string
+	Username string
+	Password string
 }
 
 type Auth interface {
