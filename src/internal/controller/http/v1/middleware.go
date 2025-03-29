@@ -13,11 +13,11 @@ const (
 	userIdCtx = "userId"
 )
 
-type AuthMiddleware struct {
+type authMiddleware struct {
 	authService service.Auth
 }
 
-func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
+func (h *authMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		token, ok := bearerToken(c.Request())
 

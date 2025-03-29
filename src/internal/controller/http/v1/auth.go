@@ -11,7 +11,7 @@ type authRoutes struct {
 	authService service.Auth
 }
 
-func NewAuthRoutes(g *echo.Group, authService service.Auth) {
+func newAuthRoutes(g *echo.Group, authService service.Auth) {
 	r := &authRoutes{
 		authService: authService,
 	}

@@ -12,12 +12,16 @@ type operationRoutes struct {
 	operationService service.Operation
 }
 
-func newOperationRoutes(g *echo.Group, operationService service.Operation) {
+func newOperationRoutes(g *echo.Group, operationService service.Operation) *operationRoutes {
 	r := &operationRoutes{
 		operationService: operationService,
 	}
 
-	// g.GET("/history", r.)
+	g.GET("/history", r.getHistory)
+	g.GET("/report-link", r.getReportLink)
+	g.GET("/report-file", r.getReportFile)
+
+	return r
 }
 
 type getHistoryInput struct {
@@ -68,7 +72,7 @@ type getReportInput struct {
 func (r *operationRoutes) getReportLink(c echo.Context) error {
 	var input getReportInput
 
-	if err := c.Validate(input); err != nil {
+	if err := c.Bind(input); err != nil {
 		newErrResponce(c, http.StatusBadRequest, "invalid request body")
 		return err
 	}
@@ -77,4 +81,40 @@ func (r *operationRoutes) getReportLink(c echo.Context) error {
 		newErrResponce(c, http.StatusBadRequest, err.Error())
 		return err
 	}
+
+	link, err := r.operationService.MakeReportLink(c.Request().Context(), input.Month, input.Year)
+	if err != nil {
+		log.Debugf("operationRoutes.getReportLink - r.operationService.MakeReportLink: %v", err)
+		newErrResponce(c, http.StatusInternalServerError, "internal server error")
+		return err
+	}
+
+	type response struct {
+		Link string `json:"link"`
+	}
+
+	return c.JSON(http.StatusOK, response{Link: link})
+}
+
+func (r *operationRoutes) getReportFile(c echo.Context) error {
+	var input getReportInput
+
+	if err := c.Bind(input); err != nil {
+		newErrResponce(c, http.StatusBadRequest, "invalid request body")
+		return err
+	}
+
+	if err := c.Validate(input); err != nil {
+		newErrResponce(c, http.StatusBadRequest, err.Error())
+		return err
+	}
+
+	file, err := r.operationService.MakeReportFile(c.Request().Context(), input.Month, input.Year)
+	if err != nil {
+		log.Debugf("operationRoutes.getReportFile - r.operationService.MakeReportFile: %v", err)
+		newErrResponce(c, http.StatusInternalServerError, "internal server error")
+		return err
+	}
+
+	return c.Blob(http.StatusOK, "text/csv", file)
 }
